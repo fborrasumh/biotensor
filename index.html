@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BioTensor · Taller de operaciones tensoriales para IA biológica</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Paleta tomada de la convención CPK de visualización molecular:
+   carbono (gris), nitrógeno (azul), oxígeno (rojo), azufre (amarillo). */
+:root{
+  --paper:#e9ebed;
+  --card:#f6f7f8;
+  --ink:#171a1d;
+  --soft:#5c6670;
+  --rule:#c7ced4;
+  --carbon:#3f4a54;
+  --nitro:#2c5aa0;
+  --nitro-w:#e3eaf5;
+  --oxy:#a8382c;
+  --oxy-w:#f6e5e3;
+  --sulfur:#9a6d05;
+  --sulfur-w:#f7eed6;
+  --ok:#1d6f52;
+  --ok-w:#dfeee8;
+  --sans:"IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.55;-webkit-text-size-adjust:100%;
+}
+a{color:var(--nitro)}
+.wrap{max-width:1060px;margin:0 auto;padding:0 18px 96px}
+
+/* ---------- cabecera ---------- */
+.top{border-bottom:1px solid var(--rule);background:var(--card)}
+.top-in{max-width:1060px;margin:0 auto;padding:14px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{font-family:var(--mono);font-weight:600;font-size:17px;letter-spacing:-.01em}
+.brand span{color:var(--nitro)}
+.top-sub{color:var(--soft);font-size:13.5px;flex:1;min-width:180px}
+.keystate{font-family:var(--mono);font-size:12px;padding:4px 9px;border:1px solid var(--rule);border-radius:999px;background:var(--paper);color:var(--soft);cursor:pointer}
+.keystate.on{border-color:var(--ok);color:var(--ok);background:var(--ok-w)}
+
+/* ---------- hero: tira de formas ---------- */
+.hero{padding:34px 0 26px;border-bottom:1px solid var(--rule)}
+.hero h1{font-size:clamp(26px,5.2vw,40px);line-height:1.14;margin:0 0 10px;font-weight:600;letter-spacing:-.022em;max-width:19ch}
+.hero p{margin:0;color:var(--soft);max-width:62ch;font-size:15.5px}
+.shapes{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 22px;font-family:var(--mono);font-size:13.5px}
+.shape{border:1px solid var(--rule);background:var(--card);padding:6px 11px;border-radius:3px;opacity:0;transform:translateY(4px);animation:pop .5s ease forwards}
+.shape b{font-weight:600;color:var(--nitro)}
+.arrow{color:var(--soft);opacity:0;animation:pop .5s ease forwards}
+@keyframes pop{to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.shape,.arrow{animation:none;opacity:1;transform:none}}
+
+/* ---------- navegación ---------- */
+nav.tabs{display:flex;gap:2px;border-bottom:1px solid var(--rule);margin:0 0 22px;overflow-x:auto}
+nav.tabs button{
+  appearance:none;background:none;border:0;border-bottom:2px solid transparent;
+  padding:13px 14px;font:inherit;font-size:14.5px;color:var(--soft);cursor:pointer;white-space:nowrap;
+}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--nitro);font-weight:500}
+nav.tabs button:focus-visible{outline:2px solid var(--nitro);outline-offset:-2px}
+.count{font-family:var(--mono);font-size:11.5px;color:var(--soft);margin-left:5px}
+
+/* ---------- piezas ---------- */
+.panel{background:var(--card);border:1px solid var(--rule);border-radius:5px;padding:18px}
+.panel + .panel{margin-top:16px}
+h2{font-size:19px;margin:0 0 4px;font-weight:600;letter-spacing:-.012em}
+h3{font-size:15px;margin:20px 0 6px;font-weight:600}
+.lede{color:var(--soft);font-size:14.5px;margin:0 0 16px;max-width:66ch}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+button.btn{
+  appearance:none;font:inherit;font-size:14.5px;padding:9px 15px;border-radius:4px;
+  border:1px solid var(--carbon);background:var(--carbon);color:#fff;cursor:pointer;
+}
+button.btn:hover{background:#333d46}
+button.btn.ghost{background:transparent;color:var(--ink);border-color:var(--rule)}
+button.btn.ghost:hover{background:var(--paper)}
+button.btn.key{background:var(--nitro);border-color:var(--nitro)}
+button.btn.key:hover{background:#26518f}
+button.btn:disabled{opacity:.45;cursor:not-allowed}
+button.btn:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--nitro);outline-offset:1px}
+label.f{display:block;font-size:13px;color:var(--soft);margin:0 0 5px}
+input.t,select.t{
+  font:inherit;font-size:14.5px;padding:8px 10px;border:1px solid var(--rule);
+  border-radius:4px;background:#fff;color:var(--ink);width:100%;
+}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:640px){.grid2{grid-template-columns:1fr}}
+
+/* ---------- catálogo ---------- */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:12px}
+.card{
+  background:var(--card);border:1px solid var(--rule);border-left:3px solid var(--carbon);
+  border-radius:4px;padding:14px;cursor:pointer;text-align:left;font:inherit;width:100%;
+}
+.card:hover{border-color:var(--nitro);border-left-color:var(--nitro)}
+.card h4{margin:0 0 5px;font-size:15.5px;font-weight:600}
+.card .meta{font-family:var(--mono);font-size:11.5px;color:var(--soft);display:flex;gap:8px;flex-wrap:wrap}
+.card .sh{font-family:var(--mono);font-size:12px;color:var(--nitro);margin-top:8px;word-break:break-all}
+.dom-atencion{border-left-color:var(--nitro)}
+.dom-proteina{border-left-color:var(--ok)}
+.dom-difusion{border-left-color:var(--sulfur)}
+.dom-secuencia{border-left-color:var(--carbon)}
+.dom-genomica{border-left-color:var(--oxy)}
+.pill{font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:999px;border:1px solid var(--rule);background:var(--paper);color:var(--soft)}
+.pill.due{border-color:var(--sulfur);background:var(--sulfur-w);color:var(--sulfur)}
+.pill.done{border-color:var(--ok);background:var(--ok-w);color:var(--ok)}
+
+/* ---------- taller ---------- */
+.stepbar{display:flex;gap:0;margin:0 0 16px;border:1px solid var(--rule);border-radius:4px;overflow:hidden;font-size:13.5px}
+.stepbar div{flex:1;padding:9px 10px;background:var(--card);color:var(--soft);border-right:1px solid var(--rule)}
+.stepbar div:last-child{border-right:0}
+.stepbar div.now{background:var(--nitro-w);color:var(--nitro);font-weight:500}
+.math{font-family:var(--mono);font-size:13.5px;background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:11px 12px;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+.io{font-family:var(--mono);font-size:13px;line-height:1.9}
+.io b{color:var(--nitro);font-weight:600}
+textarea.code{
+  width:100%;min-height:290px;font-family:var(--mono);font-size:13.5px;line-height:1.6;
+  padding:12px;border:1px solid var(--rule);border-radius:4px;background:#fff;color:var(--ink);
+  resize:vertical;tab-size:4;white-space:pre;overflow-wrap:normal;overflow-x:auto;
+}
+details.hint{border:1px solid var(--rule);border-radius:4px;background:var(--paper);padding:9px 12px;margin:8px 0}
+details.hint summary{cursor:pointer;font-size:14px;color:var(--sulfur);font-weight:500}
+details.hint[open] summary{margin-bottom:7px}
+details.hint p{margin:0;font-size:14.5px}
+
+/* ---------- veredicto ---------- */
+.verdict{border:1px solid var(--rule);border-radius:4px;padding:14px;margin-top:14px;background:#fff}
+.verdict.correcto{border-color:var(--ok);background:var(--ok-w)}
+.verdict.casi{border-color:var(--sulfur);background:var(--sulfur-w)}
+.verdict.incorrecto{border-color:var(--oxy);background:var(--oxy-w)}
+.verdict h4{margin:0 0 8px;font-size:16px}
+.chk{display:flex;gap:9px;padding:7px 0;border-top:1px solid rgba(0,0,0,.09);font-size:14.5px}
+.chk .st{font-family:var(--mono);font-size:11.5px;padding:1px 7px;border-radius:3px;height:fit-content;white-space:nowrap}
+.st.ok{background:var(--ok);color:#fff}
+.st.fallo{background:var(--oxy);color:#fff}
+.st.no_aplica{background:var(--rule);color:var(--carbon)}
+.disclaimer{font-size:12.5px;color:var(--soft);margin-top:10px;border-top:1px solid var(--rule);padding-top:9px}
+
+/* ---------- repaso ---------- */
+.due-item{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--rule);flex-wrap:wrap}
+.due-item:first-of-type{border-top:0}
+.grades{display:flex;gap:6px;flex-wrap:wrap}
+.grades button{font:inherit;font-size:13px;padding:6px 11px;border-radius:4px;border:1px solid var(--rule);background:#fff;cursor:pointer}
+.g1:hover{border-color:var(--oxy);color:var(--oxy)}
+.g2:hover{border-color:var(--sulfur);color:var(--sulfur)}
+.g3:hover{border-color:var(--nitro);color:var(--nitro)}
+.g4:hover{border-color:var(--ok);color:var(--ok)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:16px}
+.stat{border:1px solid var(--rule);border-radius:4px;padding:11px;background:var(--card)}
+.stat b{display:block;font-family:var(--mono);font-size:23px;font-weight:600;line-height:1.2}
+.stat span{font-size:12.5px;color:var(--soft)}
+
+.empty{border:1px dashed var(--rule);border-radius:5px;padding:26px 18px;text-align:center;color:var(--soft)}
+.empty p{margin:0 0 12px}
+.note{font-size:13.5px;color:var(--soft);border-left:2px solid var(--rule);padding-left:11px;margin:12px 0}
+.err{border:1px solid var(--oxy);background:var(--oxy-w);color:var(--oxy);border-radius:4px;padding:11px 13px;font-size:14px;margin:12px 0}
+.busy{font-family:var(--mono);font-size:13px;color:var(--nitro)}
+.md{font-size:15px}
+.md code{font-family:var(--mono);font-size:13px;background:var(--paper);padding:1px 5px;border-radius:3px}
+.md pre{font-family:var(--mono);font-size:13px;background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:11px;overflow-x:auto}
+.md pre code{background:none;padding:0}
+.md ul{padding-left:20px}
+.hidden{display:none}
+footer{border-top:1px solid var(--rule);margin-top:40px;padding-top:16px;font-size:13px;color:var(--soft)}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand">Bio<span>Tensor</span></div>
+    <div class="top-sub">Operaciones tensoriales de la IA biológica, escritas a mano.</div>
+    <button class="keystate" id="keyState" type="button">sin clave</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section class="hero">
+    <div class="shapes" id="shapeStrip" aria-hidden="true"></div>
+    <h1>Entiende la operación. Escríbela tú. Vuelve a ella.</h1>
+    <p>Un banco de retos sobre los bloques matemáticos que sostienen los modelos de biología: atención, geometría de proteínas, difusión, modelos de secuencia y genómica. Implementas con tensores de PyTorch, un modelo de OpenAI revisa formas, valores y gradientes, y el repaso espaciado decide cuándo te toca volver.</p>
+  </section>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-catalogo" aria-selected="true" data-view="catalogo">Retos<span class="count" id="cCat"></span></button>
+    <button role="tab" id="tab-taller" aria-selected="false" data-view="taller">Taller</button>
+    <button role="tab" id="tab-repaso" aria-selected="false" data-view="repaso">Repaso<span class="count" id="cDue"></span></button>
+    <button role="tab" id="tab-ajustes" aria-selected="false" data-view="ajustes">Ajustes</button>
+  </nav>
+
+  <!-- ================= CATÁLOGO ================= -->
+  <main id="v-catalogo">
+    <div class="panel" style="margin-bottom:16px">
+      <h2>Generar un reto nuevo</h2>
+      <p class="lede">El modelo redacta un reto con enunciado, formas de entrada y salida, pistas graduadas y plantilla de código. Se guarda en tu banco local.</p>
+      <div class="grid2">
+        <div>
+          <label class="f" for="genDom">Dominio</label>
+          <select class="t" id="genDom">
+            <option value="atencion">Atención</option>
+            <option value="proteina">Geometría de proteínas</option>
+            <option value="difusion">Difusión</option>
+            <option value="secuencia">Modelos de secuencia</option>
+            <option value="genomica">Genómica</option>
+          </select>
+        </div>
+        <div>
+          <label class="f" for="genNivel">Nivel</label>
+          <select class="t" id="genNivel">
+            <option value="1">1 — una operación aislada</option>
+            <option value="2" selected>2 — dos o tres pasos encadenados</option>
+            <option value="3">3 — bloque completo de arquitectura</option>
+          </select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn key" id="btnGen" type="button">Generar reto</button>
+        <span class="busy hidden" id="genBusy">redactando…</span>
+      </div>
+      <div id="genErr"></div>
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:14px">
+      <div style="flex:1;min-width:180px">
+        <label class="f" for="filtro">Filtrar por dominio</label>
+        <select class="t" id="filtro">
+          <option value="">Todos los dominios</option>
+          <option value="atencion">Atención</option>
+          <option value="proteina">Geometría de proteínas</option>
+          <option value="difusion">Difusión</option>
+          <option value="secuencia">Modelos de secuencia</option>
+          <option value="genomica">Genómica</option>
+        </select>
+      </div>
+    </div>
+    <div class="cards" id="cards"></div>
+  </main>
+
+  <!-- ================= TALLER ================= -->
+  <main id="v-taller" class="hidden"></main>
+
+  <!-- ================= REPASO ================= -->
+  <main id="v-repaso" class="hidden"></main>
+
+  <!-- ================= AJUSTES ================= -->
+  <main id="v-ajustes" class="hidden">
+    <div class="panel">
+      <h2>Clave y modelo</h2>
+      <p class="lede">La clave viaja desde tu navegador directamente a OpenAI. No pasa por ningún servidor intermedio. Si eliges guardarla, se queda en el almacenamiento local de este navegador: no lo hagas en un equipo compartido ni en un aula.</p>
+      <label class="f" for="inKey">Clave de OpenAI</label>
+      <input class="t" id="inKey" type="password" placeholder="sk-…" autocomplete="off">
+      <div class="row" style="margin:10px 0 18px">
+        <label style="font-size:14px;display:flex;gap:7px;align-items:center;cursor:pointer">
+          <input type="checkbox" id="inRemember"> Guardar en este navegador
+        </label>
+        <button class="btn ghost" id="btnForget" type="button">Borrar clave</button>
+      </div>
+
+      <div class="grid2">
+        <div>
+          <label class="f" for="inModel">Modelo</label>
+          <select class="t" id="inModel">
+            <option value="gpt-4o-mini">gpt-4o-mini — barato, Chat Completions</option>
+            <option value="gpt-5.6-luna">gpt-5.6-luna — rápido y económico</option>
+            <option value="gpt-5.6-terra" selected>gpt-5.6-terra — equilibrado</option>
+            <option value="gpt-5.6-sol">gpt-5.6-sol — máximo razonamiento</option>
+            <option value="__otro">otro (escribir identificador)</option>
+          </select>
+        </div>
+        <div>
+          <label class="f" for="inEffort">Esfuerzo de razonamiento <span style="opacity:.7">(solo familia GPT-5)</span></label>
+          <select class="t" id="inEffort">
+            <option value="">por defecto</option>
+            <option value="none">none</option>
+            <option value="low" selected>low</option>
+            <option value="medium">medium</option>
+            <option value="high">high</option>
+            <option value="xhigh">xhigh</option>
+            <option value="max">max</option>
+          </select>
+        </div>
+      </div>
+      <div id="otroWrap" class="hidden" style="margin-top:12px">
+        <label class="f" for="inModelOtro">Identificador del modelo</label>
+        <input class="t" id="inModelOtro" placeholder="p. ej. gpt-5.6">
+      </div>
+      <div class="note">Los modelos <span style="font-family:var(--mono)">gpt-5.*</span> se llaman por la Responses API; <span style="font-family:var(--mono)">gpt-4o-mini</span> por Chat Completions. La app elige el endpoint sola según el identificador.</div>
+      <button class="btn key" id="btnSaveSet" type="button">Guardar ajustes</button>
+      <span class="busy hidden" id="setOk">guardado</span>
+    </div>
+
+    <div class="panel">
+      <h2>Tu progreso</h2>
+      <p class="lede">Todo vive en este navegador. Exporta el JSON si cambias de equipo o si quieres archivar el estado de una asignatura.</p>
+      <div class="row">
+        <button class="btn ghost" id="btnExport" type="button">Exportar progreso</button>
+        <button class="btn ghost" id="btnImport" type="button">Importar progreso</button>
+        <button class="btn ghost" id="btnReset" type="button">Vaciar todo</button>
+      </div>
+      <input type="file" id="fileImport" accept="application/json" class="hidden">
+      <div id="setMsg"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Qué comprueba la app y qué no</h2>
+      <p class="lede" style="margin:0">Aquí no se ejecuta PyTorch. Un modelo de lenguaje lee tu código y razona sobre formas, valores, gradientes y estabilidad numérica: es una revisión razonada, no una ejecución. Sirve para detectar errores de diseño y de broadcasting, y se equivoca de vez en cuando. Cuando el veredicto te sorprenda, ejecútalo de verdad: cada reto trae un botón que copia tu código junto a un arnés de pruebas listo para pegar en Colab.</p>
+    </div>
+  </main>
+
+  <footer>
+    BioTensor · taller de práctica inspirado en la idea de BioTorch (Chris Hayduk): entender la operación, implementarla en tensores y volver a ella. Los retos son componentes de modelos, no reproducciones completas; las fechas de repaso son estimaciones de práctica, no medidas de dominio.
+  </footer>
+</div>
+
+<script>
+/* =====================================================================
+   Almacenamiento tolerante: localStorage si existe, memoria si no.
+   ===================================================================== */
+const store = (() => {
+  let ok = false;
+  try { localStorage.setItem('__bt', '1'); localStorage.removeItem('__bt'); ok = true; } catch (e) { ok = false; }
+  const mem = {};
+  return {
+    persistent: ok,
+    get(k){ try { return ok ? localStorage.getItem(k) : (mem[k] ?? null); } catch(e){ return mem[k] ?? null; } },
+    set(k,v){ try { ok ? localStorage.setItem(k,v) : (mem[k]=v); } catch(e){ mem[k]=v; } },
+    del(k){ try { ok ? localStorage.removeItem(k) : delete mem[k]; } catch(e){ delete mem[k]; } }
+  };
+})();
+
+const DOMINIOS = {
+  atencion:'Atención', proteina:'Geometría de proteínas', difusion:'Difusión',
+  secuencia:'Modelos de secuencia', genomica:'Genómica'
+};
+
+/* =====================================================================
+   Banco inicial de retos. Funciona sin clave de API.
+   ===================================================================== */
+const SEMILLA = [
+{
+  id:'atn-sdpa', dominio:'atencion', nivel:2,
+  titulo:'Atención escalada con máscara causal',
+  formas:'q,k,v: [B,H,L,D] → salida: [B,H,L,D]',
+  enunciado:'Implementa la atención por producto escalar escalado sobre cabezas múltiples, con máscara causal: la posición i solo puede atender a posiciones j ≤ i. Sin usar torch.nn.functional.scaled_dot_product_attention.',
+  math:'A = softmax( (Q Kᵀ) / √D + M )   con M[i,j] = 0 si j ≤ i, −∞ si j > i\nsalida = A V',
+  aparece:'El núcleo de todo bloque Transformer. En biología aparece en ESM y otros modelos de lenguaje de proteínas, y en la torre de secuencia de Evoformer, donde la máscara cambia de causal a máscara de padding.',
+  pistas:[
+    'Los logits tienen forma [B,H,L,L]. Antes de escribir código, escribe a mano qué eje de Q y qué eje de K se contraen.',
+    'Construye la máscara con torch.tril sobre una matriz de unos [L,L] y usa masked_fill con float("-inf") sobre los logits.',
+    'Divide entre la raíz de D (dimensión por cabeza), no entre la raíz de H·D. El softmax va sobre el último eje.'
+  ],
+  plantilla:'import torch\nimport math\n\ndef atencion_causal(q, k, v):\n    """\n    q, k, v: [B, H, L, D]\n    devuelve: [B, H, L, D]\n    """\n    # tu código aquí\n    raise NotImplementedError\n',
+  solucion:'def atencion_causal(q, k, v):\n    B, H, L, D = q.shape\n    logits = q @ k.transpose(-2, -1) / math.sqrt(D)      # [B,H,L,L]\n    mask = torch.ones(L, L, dtype=torch.bool, device=q.device).tril()\n    logits = logits.masked_fill(~mask, float("-inf"))\n    attn = torch.softmax(logits, dim=-1)\n    return attn @ v'
+},
+{
+  id:'atn-tri', dominio:'atencion', nivel:3,
+  titulo:'Actualización multiplicativa triangular (aristas salientes)',
+  formas:'z: [B,L,L,C], máscara: [B,L,L] → salida: [B,L,L,C]',
+  enunciado:'Implementa la actualización multiplicativa triangular «outgoing» de AlphaFold2 sobre la representación de pares. Para cada par (i,j) se combinan todos los caminos i→k→j.',
+  math:'a = sigmoid(Wa_g z) ⊙ (Wa z),  b = sigmoid(Wb_g z) ⊙ (Wb z)\nz\'[i,j] = g[i,j] ⊙ Wo · LayerNorm( Σ_k a[i,k] ⊙ b[j,k] )',
+  aparece:'El bloque Evoformer de AlphaFold2. Es la operación que impone la desigualdad triangular sobre las distancias implícitas: si i está cerca de k y k cerca de j, el modelo debe propagar esa restricción a (i,j).',
+  pistas:[
+    'La suma sobre k es una contracción: piensa en einsum con la firma "bikc,bjkc->bijc".',
+    'Aplica la máscara de pares a los tensores a y b antes de contraer, no después: así los pares ausentes no contaminan la suma.',
+    'El orden importa: LayerNorm sobre el resultado de la contracción, luego proyección de salida, y solo al final la puerta sigmoide.'
+  ],
+  plantilla:'import torch\n\ndef tri_mult_out(z, mask, Wa, Wa_g, Wb, Wb_g, Wo, Wg, ln):\n    """\n    z:    [B, L, L, C]\n    mask: [B, L, L]  (1 = par válido)\n    W*:   nn.Linear ya construidos;  ln: nn.LayerNorm(C)\n    devuelve: [B, L, L, C]\n    """\n    # tu código aquí\n    raise NotImplementedError\n',
+  solucion:'def tri_mult_out(z, mask, Wa, Wa_g, Wb, Wb_g, Wo, Wg, ln):\n    m = mask.unsqueeze(-1)                       # [B,L,L,1]\n    a = torch.sigmoid(Wa_g(z)) * Wa(z) * m\n    b = torch.sigmoid(Wb_g(z)) * Wb(z) * m\n    out = torch.einsum("bikc,bjkc->bijc", a, b)\n    out = Wo(ln(out))\n    return torch.sigmoid(Wg(z)) * out'
+},
+{
+  id:'pro-frame', dominio:'proteina', nivel:2,
+  titulo:'Marco local de residuo a partir del esqueleto',
+  formas:'N,CA,C: [B,L,3] → R: [B,L,3,3], t: [B,L,3]',
+  enunciado:'Construye el marco de referencia rígido de cada residuo por Gram-Schmidt sobre los átomos del esqueleto. El origen es CA; el primer eje apunta hacia C; el segundo se ortogonaliza contra la dirección de N.',
+  math:'e1 = normalizar(C − CA)\nu  = N − CA\ne2 = normalizar( u − (u·e1) e1 )\ne3 = e1 × e2,   R = [e1 e2 e3],   t = CA',
+  aparece:'La representación de marcos rígidos de AlphaFold2 e IPA, y en general cualquier red equivariante que predice orientaciones de residuos en vez de coordenadas sueltas.',
+  pistas:[
+    'Normaliza siempre con un epsilon en el denominador: hay residuos degenerados en estructuras reales y el gradiente de la norma explota en cero.',
+    'La proyección (u·e1) se calcula con una suma sobre el último eje manteniendo la dimensión: keepdim=True te ahorra el broadcasting manual.',
+    'Apila los tres ejes con torch.stack(..., dim=-1), no dim=-2: las columnas de R son los ejes del marco.'
+  ],
+  plantilla:'import torch\n\ndef marco_residuo(N, CA, C, eps=1e-8):\n    """\n    N, CA, C: [B, L, 3]\n    devuelve: R [B, L, 3, 3], t [B, L, 3]\n    """\n    # tu código aquí\n    raise NotImplementedError\n',
+  solucion:'def marco_residuo(N, CA, C, eps=1e-8):\n    v1 = C - CA\n    e1 = v1 / (v1.norm(dim=-1, keepdim=True) + eps)\n    u = N - CA\n    u_orto = u - (u * e1).sum(-1, keepdim=True) * e1\n    e2 = u_orto / (u_orto.norm(dim=-1, keepdim=True) + eps)\n    e3 = torch.cross(e1, e2, dim=-1)\n    R = torch.stack([e1, e2, e3], dim=-1)   # [B,L,3,3]\n    return R, CA'
+},
+{
+  id:'pro-dist', dominio:'proteina', nivel:1,
+  titulo:'Mapa de distancias y contactos con padding',
+  formas:'coords: [B,L,3], mask: [B,L] → D: [B,L,L], contactos: [B,L,L]',
+  enunciado:'Calcula la matriz de distancias euclídeas entre todos los pares de residuos y deriva un mapa de contactos con umbral de 8 Å. Los residuos enmascarados no deben producir contactos ni contaminar el gradiente.',
+  math:'D[i,j] = ‖x_i − x_j‖₂\ncontacto[i,j] = 1 si D[i,j] < 8 y ambos residuos son válidos',
+  aparece:'Predicción de contactos (RaptorX, trRosetta) y la señal de supervisión clásica antes de que se predijeran coordenadas 3D directamente. Sigue usándose como métrica de evaluación.',
+  pistas:[
+    'Resta con broadcasting: coords[:, :, None, :] − coords[:, None, :, :] te da los desplazamientos [B,L,L,3].',
+    'No uses sqrt de una suma de cuadrados sin epsilon: la diagonal vale exactamente 0 y su gradiente es NaN. Suma un epsilon dentro de la raíz.',
+    'La máscara de pares es el producto externo de la máscara de residuos: mask[:, :, None] * mask[:, None, :].'
+  ],
+  plantilla:'import torch\n\ndef mapa_contactos(coords, mask, umbral=8.0, eps=1e-8):\n    """\n    coords: [B, L, 3]\n    mask:   [B, L]\n    devuelve: D [B, L, L], contactos [B, L, L]\n    """\n    # tu código aquí\n    raise NotImplementedError\n',
+  solucion:'def mapa_contactos(coords, mask, umbral=8.0, eps=1e-8):\n    d = coords.unsqueeze(2) - coords.unsqueeze(1)       # [B,L,L,3]\n    D = torch.sqrt((d ** 2).sum(-1) + eps)              # [B,L,L]\n    pares = mask.unsqueeze(2) * mask.unsqueeze(1)\n    contactos = ((D < umbral) & (pares > 0)).float()\n    return D * pares, contactos'
+},
+{
+  id:'dif-forward', dominio:'difusion', nivel:1,
+  titulo:'Paso hacia adelante y recuperación de x₀',
+  formas:'x0: [B,...], t: [B] → xt: [B,...], x0_est: [B,...]',
+  enunciado:'Implementa el muestreo directo del proceso de difusión en un paso arbitrario t, y la función inversa que recupera la estimación de x₀ a partir del ruido predicho por la red.',
+  math:'x_t = √ᾱ_t · x₀ + √(1−ᾱ_t) · ε,   ε ~ N(0, I)\nx̂₀ = ( x_t − √(1−ᾱ_t) · ε̂ ) / √ᾱ_t',
+  aparece:'La base de todo modelo de difusión, incluidos los generadores de estructuras como RFdiffusion y los de moléculas pequeñas. La reparametrización a x̂₀ es lo que permite aplicar restricciones geométricas durante el muestreo.',
+  pistas:[
+    'alphas_bar es un vector [T]. Índexalo con t para obtener [B] y luego añade ejes hasta que haga broadcasting con x0.',
+    'Una forma limpia de añadir los ejes: a.view(-1, *([1] * (x0.dim() - 1))).',
+    'Si generas el ruido dentro de la función, devuélvelo también: lo necesitarás como objetivo de la pérdida.'
+  ],
+  plantilla:'import torch\n\ndef q_muestreo(x0, t, alphas_bar, ruido=None):\n    """\n    x0: [B, ...]   t: [B] (entero)   alphas_bar: [T]\n    devuelve: xt, ruido\n    """\n    # tu código aquí\n    raise NotImplementedError\n\ndef predecir_x0(xt, t, alphas_bar, ruido_pred):\n    # tu código aquí\n    raise NotImplementedError\n',
+  solucion:'def _ejes(a, x):\n    return a.view(-1, *([1] * (x.dim() - 1)))\n\ndef q_muestreo(x0, t, alphas_bar, ruido=None):\n    if ruido is None:\n        ruido = torch.randn_like(x0)\n    ab = alphas_bar[t]\n    xt = _ejes(ab.sqrt(), x0) * x0 + _ejes((1 - ab).sqrt(), x0) * ruido\n    return xt, ruido\n\ndef predecir_x0(xt, t, alphas_bar, ruido_pred):\n    ab = alphas_bar[t]\n    return (xt - _ejes((1 - ab).sqrt(), xt) * ruido_pred) / _ejes(ab.sqrt(), xt)'
+},
+{
+  id:'sec-rope', dominio:'secuencia', nivel:2,
+  titulo:'Incrustaciones rotatorias de posición',
+  formas:'x: [B,H,L,D] → [B,H,L,D]',
+  enunciado:'Implementa RoPE: rota cada par de dimensiones adyacentes del vector de consulta o clave por un ángulo proporcional a su posición, de modo que el producto escalar entre dos posiciones dependa solo de su distancia relativa.',
+  math:'θ_k = 10000^(−2k/D)\n(x\'_{2k}, x\'_{2k+1}) = ( x_{2k}·cos(mθ_k) − x_{2k+1}·sin(mθ_k),\n                        x_{2k}·sin(mθ_k) + x_{2k+1}·cos(mθ_k) )',
+  aparece:'Los modelos de lenguaje de proteínas modernos y las variantes de Transformer para secuencias largas de ADN, donde la posición absoluta no significa nada pero la distancia entre motivos sí.',
+  pistas:[
+    'D debe ser par. Reorganiza el último eje en pares con x.view(..., D//2, 2) o separa mitades; ambas convenciones son válidas si eres consistente.',
+    'Las frecuencias solo dependen de D: calcúlalas una vez con torch.arange(0, D, 2) y el producto externo con las posiciones te da [L, D//2].',
+    'cos y sin necesitan ejes de difusión para B y H: usa unsqueeze o índexa con None hasta llegar a [1,1,L,D//2].'
+  ],
+  plantilla:'import torch\n\ndef rope(x, base=10000.0):\n    """\n    x: [B, H, L, D] con D par\n    devuelve: [B, H, L, D]\n    """\n    # tu código aquí\n    raise NotImplementedError\n',
+  solucion:'def rope(x, base=10000.0):\n    B, H, L, D = x.shape\n    assert D % 2 == 0\n    idx = torch.arange(0, D, 2, device=x.device, dtype=x.dtype)\n    inv = 1.0 / (base ** (idx / D))                  # [D/2]\n    pos = torch.arange(L, device=x.device, dtype=x.dtype)\n    ang = pos[:, None] * inv[None, :]                # [L, D/2]\n    cos, sin = ang.cos()[None, None], ang.sin()[None, None]\n    xp = x.view(B, H, L, D // 2, 2)\n    x1, x2 = xp[..., 0], xp[..., 1]\n    o1 = x1 * cos - x2 * sin\n    o2 = x1 * sin + x2 * cos\n    return torch.stack([o1, o2], dim=-1).flatten(-2)'
+},
+{
+  id:'sec-pool', dominio:'secuencia', nivel:1,
+  titulo:'Agregación enmascarada sobre longitudes variables',
+  formas:'h: [B,L,C], mask: [B,L] → [B,C]',
+  enunciado:'Reduce una pila de representaciones por residuo a un único vector por secuencia, promediando solo las posiciones válidas. Devuelve además la variante de máximo enmascarado.',
+  math:'media[b] = ( Σ_l mask[b,l] · h[b,l] ) / ( Σ_l mask[b,l] )\nmax[b,c]  = max_{ l : mask[b,l]=1 } h[b,l,c]',
+  aparece:'La capa que convierte la salida de un modelo de lenguaje de proteínas en un descriptor de longitud fija para clasificación o regresión: predicción de localización subcelular, termoestabilidad, afinidad.',
+  pistas:[
+    'El error clásico es dividir entre L en lugar de entre el número de posiciones válidas: las secuencias cortas quedan sistemáticamente atenuadas.',
+    'Para el máximo, no multipliques por la máscara: pon −inf en las posiciones inválidas con masked_fill, o un ceroa la salida las dominará.',
+    'Protege la división con clamp(min=1) sobre el denominador por si alguna fila de la máscara está entera a cero.'
+  ],
+  plantilla:'import torch\n\ndef pooling_enmascarado(h, mask):\n    """\n    h:    [B, L, C]\n    mask: [B, L]\n    devuelve: media [B, C], maximo [B, C]\n    """\n    # tu código aquí\n    raise NotImplementedError\n',
+  solucion:'def pooling_enmascarado(h, mask):\n    m = mask.unsqueeze(-1).to(h.dtype)                  # [B,L,1]\n    suma = (h * m).sum(dim=1)\n    n = m.sum(dim=1).clamp(min=1.0)\n    media = suma / n\n    maximo = h.masked_fill(m == 0, float("-inf")).max(dim=1).values\n    return media, maximo'
+},
+{
+  id:'gen-pwm', dominio:'genomica', nivel:2,
+  titulo:'Rastreo de motivos con una matriz de pesos de posición',
+  formas:'seqs: [B,L] (enteros 0..3), pwm: [4,W] → puntuaciones: [B,L−W+1]',
+  enunciado:'Codifica secuencias de ADN en one-hot y puntúa cada ventana con una PWM en escala log-odds, usando convolución 1D. Devuelve también la posición de la mejor coincidencia por secuencia.',
+  math:'onehot ∈ {0,1}^{B×4×L}\npuntuación[b, i] = Σ_{c,w} onehot[b, c, i+w] · pwm[c, w]',
+  aparece:'La primera capa de las redes convolucionales de genómica regulatoria: DeepBind, DeepSEA, Basset. Los filtros aprendidos son PWMs y se interpretan como motivos de unión de factores de transcripción.',
+  pistas:[
+    'F.one_hot devuelve [B,L,4]; conv1d espera los canales en el medio, así que necesitas un transpose antes de convolucionar.',
+    'El peso de conv1d tiene forma [salida, entrada, kernel]: una sola PWM es [1,4,W], y tendrás que quitar el eje de salida al final.',
+    'Convierte a float antes de convolucionar: one_hot devuelve enteros y conv1d no acepta long.'
+  ],
+  plantilla:'import torch\nimport torch.nn.functional as F\n\ndef puntuar_pwm(seqs, pwm):\n    """\n    seqs: [B, L] enteros en 0..3 (A,C,G,T)\n    pwm:  [4, W] log-odds\n    devuelve: puntuaciones [B, L-W+1], mejor_pos [B]\n    """\n    # tu código aquí\n    raise NotImplementedError\n',
+  solucion:'def puntuar_pwm(seqs, pwm):\n    oh = F.one_hot(seqs.long(), num_classes=4).float()   # [B,L,4]\n    oh = oh.transpose(1, 2)                              # [B,4,L]\n    w = pwm.unsqueeze(0).to(oh.dtype)                    # [1,4,W]\n    sc = F.conv1d(oh, w).squeeze(1)                      # [B, L-W+1]\n    return sc, sc.argmax(dim=1)'
+},
+{
+  id:'gen-rc', dominio:'genomica', nivel:1,
+  titulo:'Equivarianza a la hebra complementaria',
+  formas:'x: [B,4,L] → [B,4,L]',
+  enunciado:'Implementa el complemento inverso sobre secuencias en one-hot y comprueba que una función dada sea equivariante a esa transformación. El complemento inverso invierte el eje de posición e intercambia A↔T y C↔G.',
+  math:'rc(x)[c, l] = x[ σ(c), L−1−l ]   con σ: A↔T, C↔G\nequivariante ⟺ f(rc(x)) = rc(f(x))',
+  aparece:'El ADN de doble hebra no tiene orientación privilegiada: un motivo puede aparecer en cualquiera de las dos. Las arquitecturas de genómica imponen esta simetría por promediado o por diseño del filtro.',
+  pistas:[
+    'Con el orden A,C,G,T el intercambio de bases es exactamente invertir el eje de canales: los índices 0..3 pasan a 3..0.',
+    'torch.flip acepta varios ejes a la vez, así que la operación completa cabe en una sola llamada.',
+    'Para comprobar equivarianza usa torch.allclose con una tolerancia explícita; la igualdad exacta falla por acumulación en punto flotante.'
+  ],
+  plantilla:'import torch\n\ndef complemento_inverso(x):\n    """\n    x: [B, 4, L] one-hot en orden A, C, G, T\n    devuelve: [B, 4, L]\n    """\n    # tu código aquí\n    raise NotImplementedError\n\ndef es_equivariante(f, x, tol=1e-5):\n    # tu código aquí\n    raise NotImplementedError\n',
+  solucion:'def complemento_inverso(x):\n    return torch.flip(x, dims=[1, 2])\n\ndef es_equivariante(f, x, tol=1e-5):\n    izq = f(complemento_inverso(x))\n    der = complemento_inverso(f(x))\n    return torch.allclose(izq, der, atol=tol)'
+}
+];
+
+/* =====================================================================
+   Estado
+   ===================================================================== */
+const K_SET='bt.settings', K_PROB='bt.problemas', K_PROG='bt.progreso', K_COD='bt.codigo';
+const state = {
+  settings: JSON.parse(store.get(K_SET) || '{"model":"gpt-5.6-terra","effort":"low","remember":false}'),
+  extra: JSON.parse(store.get(K_PROB) || '[]'),
+  prog: JSON.parse(store.get(K_PROG) || '{}'),
+  codigo: JSON.parse(store.get(K_COD) || '{}'),
+  actual: null,
+  vista: 'catalogo'
+};
+state.settings.key = state.settings.key || '';
+function guardar(){
+  const s = Object.assign({}, state.settings);
+  if(!s.remember) delete s.key;
+  store.set(K_SET, JSON.stringify(s));
+  store.set(K_PROB, JSON.stringify(state.extra));
+  store.set(K_PROG, JSON.stringify(state.prog));
+  store.set(K_COD, JSON.stringify(state.codigo));
+}
+function retos(){ return SEMILLA.concat(state.extra); }
+function reto(id){ return retos().find(p => p.id === id); }
+
+/* =====================================================================
+   FSRS 4.5 — planificador de repaso espaciado
+   ===================================================================== */
+const W=[0.4872,1.4003,3.7145,13.8206,5.1618,1.2298,0.8975,0.0310,1.6474,0.1367,1.0461,2.1072,0.0793,0.3246,1.5870,0.2272,2.8755];
+const DECAY=-0.5, FACTOR=19/81, RETENCION=0.9;
+const clampD = d => Math.min(10, Math.max(1, d));
+const D0 = g => clampD(W[4] - (g - 3) * W[5]);
+const S0 = g => W[g - 1];
+const R = (t, S) => Math.pow(1 + FACTOR * t / S, DECAY);
+const intervalo = S => Math.max(1, Math.round(S / FACTOR * (Math.pow(RETENCION, 1/DECAY) - 1)));
+function nextD(D, g){
+  const d1 = D - W[6] * (g - 3);
+  return clampD(W[7] * D0(3) + (1 - W[7]) * d1);
+}
+function nextS(S, D, r, g){
+  if(g === 1) return W[11] * Math.pow(D, -W[12]) * (Math.pow(S + 1, W[13]) - 1) * Math.exp((1 - r) * W[14]);
+  const hard = g === 2 ? W[15] : 1, easy = g === 4 ? W[16] : 1;
+  return S * (1 + Math.exp(W[8]) * (11 - D) * Math.pow(S, -W[9]) * (Math.exp((1 - r) * W[10]) - 1) * hard * easy);
+}
+const DIA = 86400000;
+function calificar(id, g){
+  const hoy = Date.now();
+  let p = state.prog[id];
+  if(!p || !p.S){
+    p = { S: S0(g), D: D0(g), reps: 1, lapsos: g === 1 ? 1 : 0, ultimo: hoy };
+  } else {
+    const t = Math.max(0, (hoy - p.ultimo) / DIA);
+    const r = R(t, p.S);
+    p = { S: nextS(p.S, p.D, r, g), D: nextD(p.D, g), reps: p.reps + 1,
+          lapsos: p.lapsos + (g === 1 ? 1 : 0), ultimo: hoy };
+  }
+  p.intervalo = intervalo(p.S);
+  p.proximo = hoy + p.intervalo * DIA;
+  state.prog[id] = p;
+  guardar();
+  return p;
+}
+const pendientes = () => retos().filter(p => state.prog[p.id] && state.prog[p.id].proximo <= Date.now());
+
+/* =====================================================================
+   Puente con OpenAI: Responses API para gpt-5.*, Chat Completions para el resto
+   ===================================================================== */
+function modeloActivo(){
+  const m = state.settings.model;
+  return m === '__otro' ? (state.settings.modelOtro || 'gpt-4o-mini') : m;
+}
+function esFamiliaNueva(m){ return /^(gpt-5|o[1-9])/.test(m); }
+
+async function llm({ system, user, maxTokens = 2000 }){
+  const key = (state.settings.key || '').trim();
+  if(!key) throw new Error('No hay clave de OpenAI configurada. Ve a Ajustes y pégala.');
+  const model = modeloActivo();
+  let url, body;
+  if(esFamiliaNueva(model)){
+    url = 'https://api.openai.com/v1/responses';
+    body = { model, input: [{ role:'system', content: system }, { role:'user', content: user }], max_output_tokens: maxTokens };
+    if(state.settings.effort) body.reasoning = { effort: state.settings.effort };
+  } else {
+    url = 'https://api.openai.com/v1/chat/completions';
+    body = { model, messages: [{ role:'system', content: system }, { role:'user', content: user }], max_tokens: maxTokens, temperature: 0.3 };
+  }
+  let res;
+  try {
+    res = await fetch(url, { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + key }, body: JSON.stringify(body) });
+  } catch(e){
+    throw new Error('No se pudo contactar con la API. Si has abierto el archivo con doble clic, sírvelo desde un servidor o publícalo: el navegador bloquea la petición desde file://');
+  }
+  if(!res.ok){
+    const txt = await res.text();
+    let msg = txt.slice(0, 400);
+    try { msg = JSON.parse(txt).error.message; } catch(e){}
+    throw new Error('OpenAI ' + res.status + ' · ' + msg);
+  }
+  const d = await res.json();
+  return extraerTexto(d);
+}
+function extraerTexto(d){
+  if(typeof d.output_text === 'string' && d.output_text.trim()) return d.output_text;
+  if(Array.isArray(d.output)){
+    const partes = [];
+    for(const bloque of d.output){
+      if(Array.isArray(bloque.content)){
+        for(const c of bloque.content){ if(typeof c.text === 'string') partes.push(c.text); }
+      }
+    }
+    if(partes.length) return partes.join('\n');
+  }
+  if(d.choices && d.choices[0] && d.choices[0].message) return d.choices[0].message.content || '';
+  return '';
+}
+function extraerJSON(txt){
+  let t = String(txt).trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+  const i = t.indexOf('{'), j = t.lastIndexOf('}');
+  if(i === -1 || j === -1) throw new Error('La respuesta del modelo no contenía JSON.');
+  return JSON.parse(t.slice(i, j + 1));
+}
+
+/* =====================================================================
+   Utilidades de presentación
+   ===================================================================== */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function md(t){
+  let h = esc(t);
+  h = h.replace(/```(\w*)\n([\s\S]*?)```/g, (m, l, c) => '<pre><code>' + c + '</code></pre>');
+  h = h.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+  h = h.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  h = h.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  h = h.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
+  h = h.replace(/(<li>[\s\S]*?<\/li>)(?!\s*<li>)/g, '<ul>$1</ul>');
+  return h.split(/\n{2,}/).map(p => /^<(h3|ul|pre)/.test(p.trim()) ? p : '<p>' + p.replace(/\n/g, '<br>') + '</p>').join('');
+}
+const $ = s => document.querySelector(s);
+
+/* ---------- tira de formas del encabezado ---------- */
+(function tira(){
+  const pasos = ['[B, L, d]', '[B, H, L, d/H]', '[B, H, L, L]', '[B, L, d]'];
+  const el = $('#shapeStrip');
+  pasos.forEach((s, i) => {
+    if(i){
+      const a = document.createElement('span');
+      a.className = 'arrow'; a.textContent = '→';
+      a.style.animationDelay = (i * .18 - .06) + 's';
+      el.appendChild(a);
+    }
+    const d = document.createElement('span');
+    d.className = 'shape';
+    d.innerHTML = s.replace(/L|H|B|d\/H|d/g, m => '<b>' + m + '</b>');
+    d.style.animationDelay = (i * .18) + 's';
+    el.appendChild(d);
+  });
+})();
+
+/* =====================================================================
+   Navegación
+   ===================================================================== */
+document.querySelectorAll('nav.tabs button').forEach(b => {
+  b.addEventListener('click', () => ir(b.dataset.view));
+});
+function ir(v){
+  state.vista = v;
+  document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === v)));
+  ['catalogo','taller','repaso','ajustes'].forEach(x => $('#v-' + x).classList.toggle('hidden', x !== v));
+  if(v === 'catalogo') pintarCatalogo();
+  if(v === 'taller') pintarTaller();
+  if(v === 'repaso') pintarRepaso();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* =====================================================================
+   Catálogo
+   ===================================================================== */
+function pintarCatalogo(){
+  const f = $('#filtro').value;
+  const lista = retos().filter(p => !f || p.dominio === f);
+  $('#cCat').textContent = retos().length;
+  $('#cDue').textContent = pendientes().length || '';
+  $('#cards').innerHTML = lista.map(p => {
+    const pr = state.prog[p.id];
+    let pill = '';
+    if(pr && pr.proximo <= Date.now()) pill = '<span class="pill due">toca repasar</span>';
+    else if(pr) pill = '<span class="pill done">en ' + Math.max(1, Math.round((pr.proximo - Date.now()) / DIA)) + ' d</span>';
+    return '<button class="card dom-' + p.dominio + '" data-id="' + esc(p.id) + '" type="button">' +
+      '<h4>' + esc(p.titulo) + '</h4>' +
+      '<div class="meta"><span>' + esc(DOMINIOS[p.dominio] || p.dominio) + '</span><span>nivel ' + esc(p.nivel) + '</span>' + pill + '</div>' +
+      '<div class="sh">' + esc(p.formas) + '</div></button>';
+  }).join('') || '<div class="empty"><p>No hay retos en este dominio todavía.</p></div>';
+  document.querySelectorAll('#cards .card').forEach(c => {
+    c.addEventListener('click', () => { state.actual = c.dataset.id; ir('taller'); });
+  });
+}
+$('#filtro').addEventListener('change', pintarCatalogo);
+
+/* =====================================================================
+   Taller
+   ===================================================================== */
+function pintarTaller(){
+  const cont = $('#v-taller');
+  const p = reto(state.actual);
+  if(!p){
+    cont.innerHTML = '<div class="empty"><p>Todavía no has abierto ningún reto.</p><button class="btn key" type="button" onclick="ir(\'catalogo\')">Ver los retos</button></div>';
+    return;
+  }
+  const guardado = state.codigo[p.id] || p.plantilla;
+  cont.innerHTML =
+  '<div class="stepbar"><div class="now">1 · Entiende la operación</div><div>2 · Escríbela</div><div>3 · Vuelve a ella</div></div>' +
+  '<div class="panel">' +
+    '<div class="meta" style="font-family:var(--mono);font-size:12px;color:var(--soft);margin-bottom:6px">' + esc(DOMINIOS[p.dominio]) + ' · nivel ' + esc(p.nivel) + '</div>' +
+    '<h2>' + esc(p.titulo) + '</h2>' +
+    '<p style="margin:10px 0 14px">' + esc(p.enunciado) + '</p>' +
+    '<div class="io"><b>Formas</b> · ' + esc(p.formas) + '</div>' +
+    '<h3>La operación</h3><div class="math">' + esc(p.math) + '</div>' +
+    '<h3>Dónde aparece</h3><p style="margin:0;font-size:14.5px">' + esc(p.aparece) + '</p>' +
+    '<h3>Pistas</h3>' +
+    p.pistas.map((h, i) => '<details class="hint"><summary>Pista ' + (i+1) + '</summary><p>' + esc(h) + '</p></details>').join('') +
+    '<div class="row" style="margin-top:14px">' +
+      '<button class="btn ghost" id="btnTutor" type="button">Explícame la intuición</button>' +
+      '<span class="busy hidden" id="tutorBusy">pensando…</span>' +
+    '</div>' +
+    '<div id="tutorOut"></div>' +
+  '</div>' +
+  '<div class="panel">' +
+    '<h2>Tu implementación</h2>' +
+    '<p class="lede">PyTorch puro. Tab inserta cuatro espacios.</p>' +
+    '<textarea class="code" id="editor" spellcheck="false">' + esc(guardado) + '</textarea>' +
+    '<div class="row" style="margin-top:12px">' +
+      '<button class="btn key" id="btnEval" type="button">Revisar mi código</button>' +
+      '<button class="btn ghost" id="btnColab" type="button">Copiar con arnés de pruebas</button>' +
+      '<button class="btn ghost" id="btnSol" type="button">Ver una solución</button>' +
+      '<button class="btn ghost" id="btnReset1" type="button">Volver a la plantilla</button>' +
+      '<span class="busy hidden" id="evalBusy">revisando…</span>' +
+    '</div>' +
+    '<div id="evalOut"></div>' +
+  '</div>';
+
+  const ed = $('#editor');
+  ed.addEventListener('input', () => { state.codigo[p.id] = ed.value; guardar(); });
+  ed.addEventListener('keydown', e => {
+    if(e.key === 'Tab'){
+      e.preventDefault();
+      const s = ed.selectionStart, t = ed.selectionEnd;
+      ed.value = ed.value.slice(0, s) + '    ' + ed.value.slice(t);
+      ed.selectionStart = ed.selectionEnd = s + 4;
+      state.codigo[p.id] = ed.value; guardar();
+    }
+  });
+  $('#btnReset1').addEventListener('click', () => { ed.value = p.plantilla; state.codigo[p.id] = p.plantilla; guardar(); });
+  $('#btnSol').addEventListener('click', () => {
+    $('#evalOut').innerHTML = '<div class="verdict"><h4>Una solución de referencia</h4>' +
+      '<p style="font-size:14px;color:var(--soft);margin:0 0 8px">No es la única correcta. Compárala con la tuya y fíjate en dónde divergen las formas, no solo el resultado.</p>' +
+      '<pre style="font-family:var(--mono);font-size:13px;background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:11px;overflow-x:auto">' + esc(p.solucion) + '</pre></div>';
+  });
+  $('#btnColab').addEventListener('click', () => {
+    const arnes = '# ' + p.titulo + '\n# Formas: ' + p.formas + '\nimport torch\n\n' + ed.value +
+      '\n\n# --- arnés de pruebas: ajusta las formas y ejecútalo ---\n' +
+      'torch.manual_seed(0)\n# 1) comprueba la forma de salida\n# 2) comprueba valores contra un caso calculado a mano\n' +
+      '# 3) comprueba que loss.backward() produce gradientes finitos\n';
+    navigator.clipboard.writeText(arnes).then(
+      () => { $('#btnColab').textContent = 'copiado'; setTimeout(() => $('#btnColab').textContent = 'Copiar con arnés de pruebas', 1600); },
+      () => alert('No se pudo copiar. Selecciona el código a mano.')
+    );
+  });
+  $('#btnEval').addEventListener('click', () => evaluar(p, ed.value));
+  $('#btnTutor').addEventListener('click', () => tutor(p));
+}
+
+async function tutor(p){
+  $('#tutorBusy').classList.remove('hidden');
+  $('#tutorOut').innerHTML = '';
+  try {
+    const txt = await llm({
+      system: 'Eres un tutor de deep learning aplicado a biología. Explicas en español, con precisión y sin paja. No escribes la solución en código: das la intuición, el recorrido de las formas paso a paso y el error conceptual más frecuente. Máximo 250 palabras. Usa Markdown ligero.',
+      user: 'Reto: ' + p.titulo + '\nDominio: ' + DOMINIOS[p.dominio] + '\nEnunciado: ' + p.enunciado + '\nFormas: ' + p.formas + '\nMatemáticas:\n' + p.math + '\n\nExplica la intuición y el recorrido de las formas. No des código.',
+      maxTokens: 1200
+    });
+    $('#tutorOut').innerHTML = '<div class="verdict"><div class="md">' + md(txt) + '</div></div>';
+  } catch(e){
+    $('#tutorOut').innerHTML = '<div class="err">' + esc(e.message) + '</div>';
+  } finally {
+    $('#tutorBusy').classList.add('hidden');
+  }
+}
+
+async function evaluar(p, codigo){
+  if(!codigo.trim() || codigo.includes('raise NotImplementedError')){
+    $('#evalOut').innerHTML = '<div class="err">La plantilla sigue sin implementar. Escribe tu versión antes de pedir la revisión.</div>';
+    return;
+  }
+  $('#evalBusy').classList.remove('hidden');
+  $('#evalOut').innerHTML = '';
+  try {
+    const txt = await llm({
+      system: 'Eres un revisor de código PyTorch, exigente y concreto. Razonas sobre el código como si lo ejecutaras mentalmente: propagas las formas, compruebas el broadcasting, sigues los valores en casos límite y verificas que el grafo de gradientes esté intacto. No reveles la solución completa: señala qué falla y qué mirar. Responde ÚNICAMENTE con un objeto JSON válido, sin texto alrededor, con este esquema exacto: {"veredicto":"correcto"|"casi"|"incorrecto","resumen":"una o dos frases","comprobaciones":[{"nombre":"...","estado":"ok"|"fallo"|"no_aplica","detalle":"..."}],"siguiente_paso":"..."}. Las comprobaciones deben cubrir, en este orden: Formas, Valores numéricos, Gradientes, Broadcasting, Estabilidad numérica. Todo en español.',
+      user: 'RETO: ' + p.titulo + '\nENUNCIADO: ' + p.enunciado + '\nFORMAS ESPERADAS: ' + p.formas + '\nMATEMÁTICAS:\n' + p.math + '\n\nSOLUCIÓN DE REFERENCIA (no la reveles al estudiante):\n' + p.solucion + '\n\nCÓDIGO DEL ESTUDIANTE:\n' + codigo,
+      maxTokens: 2000
+    });
+    pintarVeredicto(p, extraerJSON(txt));
+  } catch(e){
+    $('#evalOut').innerHTML = '<div class="err">' + esc(e.message) + '</div>';
+  } finally {
+    $('#evalBusy').classList.add('hidden');
+  }
+}
+
+function pintarVeredicto(p, v){
+  const clase = ['correcto','casi','incorrecto'].includes(v.veredicto) ? v.veredicto : 'casi';
+  const titulos = { correcto:'Correcto', casi:'Casi', incorrecto:'Todavía no' };
+  const chks = (v.comprobaciones || []).map(c => {
+    const st = ['ok','fallo','no_aplica'].includes(c.estado) ? c.estado : 'no_aplica';
+    const etq = { ok:'pasa', fallo:'falla', no_aplica:'n/a' }[st];
+    return '<div class="chk"><span class="st ' + st + '">' + etq + '</span><span><b>' + esc(c.nombre) + '</b> — ' + esc(c.detalle) + '</span></div>';
+  }).join('');
+  $('#evalOut').innerHTML =
+    '<div class="verdict ' + clase + '">' +
+      '<h4>' + titulos[clase] + '</h4>' +
+      '<p style="margin:0 0 8px">' + esc(v.resumen || '') + '</p>' + chks +
+      (v.siguiente_paso ? '<p style="margin:12px 0 0;font-size:14.5px"><b>Siguiente paso:</b> ' + esc(v.siguiente_paso) + '</p>' : '') +
+      '<div class="disclaimer">Revisión razonada por ' + esc(modeloActivo()) + ', no ejecución real. Confírmalo ejecutando el código.</div>' +
+    '</div>' +
+    '<div class="panel" style="margin-top:14px"><h3 style="margin-top:0">¿Cuándo quieres volver a este reto?</h3>' +
+    '<p class="lede">Tu respuesta alimenta el planificador de repaso.</p>' +
+    '<div class="grades">' +
+      '<button class="g1" data-g="1" type="button">Otra vez</button>' +
+      '<button class="g2" data-g="2" type="button">Difícil</button>' +
+      '<button class="g3" data-g="3" type="button">Bien</button>' +
+      '<button class="g4" data-g="4" type="button">Fácil</button>' +
+    '</div><div id="gradeMsg"></div></div>';
+  document.querySelectorAll('#evalOut .grades button').forEach(b => {
+    b.addEventListener('click', () => {
+      const pr = calificar(p.id, Number(b.dataset.g));
+      $('#gradeMsg').innerHTML = '<p class="note" style="margin-bottom:0">Vuelve a este reto en ' + pr.intervalo + ' día' + (pr.intervalo === 1 ? '' : 's') + '. Estabilidad ' + pr.S.toFixed(1) + ', dificultad ' + pr.D.toFixed(1) + '.</p>';
+      $('#cDue').textContent = pendientes().length || '';
+    });
+  });
+}
+
+/* =====================================================================
+   Repaso
+   ===================================================================== */
+function pintarRepaso(){
+  const due = pendientes();
+  const vistos = Object.keys(state.prog).length;
+  const estab = vistos ? (Object.values(state.prog).reduce((a, p) => a + p.S, 0) / vistos) : 0;
+  const lapsos = Object.values(state.prog).reduce((a, p) => a + (p.lapsos || 0), 0);
+  const proximos = retos().filter(p => state.prog[p.id]).sort((a, b) => state.prog[a.id].proximo - state.prog[b.id].proximo);
+
+  $('#v-repaso').innerHTML =
+    '<div class="stats">' +
+      '<div class="stat"><b>' + due.length + '</b><span>tocan hoy</span></div>' +
+      '<div class="stat"><b>' + vistos + '</b><span>retos en curso</span></div>' +
+      '<div class="stat"><b>' + estab.toFixed(1) + '</b><span>estabilidad media (días)</span></div>' +
+      '<div class="stat"><b>' + lapsos + '</b><span>olvidos registrados</span></div>' +
+    '</div>' +
+    '<div class="panel">' +
+      '<h2>Cola de repaso</h2>' +
+      '<p class="lede">El planificador es FSRS 4.5 con retención objetivo del 90 %. Estima cuándo conviene volver, no mide lo que sabes.</p>' +
+      (proximos.length ? proximos.map(p => {
+        const pr = state.prog[p.id];
+        const d = Math.round((pr.proximo - Date.now()) / DIA);
+        const cuando = d <= 0 ? '<span class="pill due">toca hoy</span>' : '<span class="pill">en ' + d + ' d</span>';
+        return '<div class="due-item"><div><div style="font-weight:500">' + esc(p.titulo) + '</div>' +
+          '<div style="font-family:var(--mono);font-size:12px;color:var(--soft)">' + esc(DOMINIOS[p.dominio]) + ' · ' + pr.reps + ' repasos · S=' + pr.S.toFixed(1) + '</div></div>' +
+          '<div class="row">' + cuando + '<button class="btn ghost" data-open="' + esc(p.id) + '" type="button">Abrir</button></div></div>';
+      }).join('') : '<div class="empty"><p>Nada en la cola todavía. Resuelve un reto y califícalo para que entre en el ciclo de repaso.</p><button class="btn key" type="button" onclick="ir(\'catalogo\')">Ver los retos</button></div>') +
+    '</div>';
+  document.querySelectorAll('#v-repaso [data-open]').forEach(b => {
+    b.addEventListener('click', () => { state.actual = b.dataset.open; ir('taller'); });
+  });
+}
+
+/* =====================================================================
+   Generación de retos nuevos
+   ===================================================================== */
+$('#btnGen').addEventListener('click', async () => {
+  const dom = $('#genDom').value, nivel = $('#genNivel').value;
+  $('#genBusy').classList.remove('hidden');
+  $('#genErr').innerHTML = '';
+  const existentes = retos().filter(p => p.dominio === dom).map(p => p.titulo).join('; ');
+  try {
+    const txt = await llm({
+      system: 'Diseñas ejercicios de implementación de operaciones tensoriales para un curso de IA aplicada a la biología. Cada ejercicio es un componente de modelo, nunca un modelo completo, y debe resolverse en menos de 25 líneas de PyTorch puro. Responde ÚNICAMENTE con un objeto JSON válido, sin texto alrededor, con este esquema: {"titulo":"...","formas":"entradas → salida con notación de corchetes","enunciado":"2-4 frases","math":"las ecuaciones en texto plano","aparece":"2-3 frases sobre en qué arquitectura real aparece y por qué importa","pistas":["...","...","..."],"plantilla":"código Python con la firma y docstring, cuerpo sin implementar","solucion":"implementación de referencia completa"}. Las tres pistas van de menos a más concretas: la primera reorienta, la segunda nombra la operación clave, la tercera resuelve la trampa técnica. Todo en español salvo los identificadores de código.',
+      user: 'Dominio: ' + DOMINIOS[dom] + '\nNivel de dificultad: ' + nivel + ' de 3.\nEvita repetir estos retos ya existentes: ' + (existentes || 'ninguno') + '.\nGenera uno nuevo y distinto.',
+      maxTokens: 2600
+    });
+    const p = extraerJSON(txt);
+    p.id = 'gen-' + Date.now().toString(36);
+    p.dominio = dom;
+    p.nivel = Number(nivel);
+    p.pistas = Array.isArray(p.pistas) ? p.pistas : [String(p.pistas || '')];
+    state.extra.push(p);
+    guardar();
+    state.actual = p.id;
+    ir('taller');
+  } catch(e){
+    $('#genErr').innerHTML = '<div class="err">' + esc(e.message) + '</div>';
+  } finally {
+    $('#genBusy').classList.add('hidden');
+  }
+});
+
+/* =====================================================================
+   Ajustes
+   ===================================================================== */
+function pintarAjustes(){
+  $('#inKey').value = state.settings.key || '';
+  $('#inRemember').checked = !!state.settings.remember;
+  $('#inModel').value = state.settings.model || 'gpt-5.6-terra';
+  $('#inEffort').value = state.settings.effort || '';
+  $('#inModelOtro').value = state.settings.modelOtro || '';
+  $('#otroWrap').classList.toggle('hidden', $('#inModel').value !== '__otro');
+  const k = $('#keyState');
+  const hay = !!(state.settings.key || '').trim();
+  k.textContent = hay ? modeloActivo() : 'sin clave';
+  k.classList.toggle('on', hay);
+}
+$('#keyState').addEventListener('click', () => ir('ajustes'));
+$('#inModel').addEventListener('change', () => $('#otroWrap').classList.toggle('hidden', $('#inModel').value !== '__otro'));
+$('#btnSaveSet').addEventListener('click', () => {
+  state.settings.key = $('#inKey').value.trim();
+  state.settings.remember = $('#inRemember').checked;
+  state.settings.model = $('#inModel').value;
+  state.settings.modelOtro = $('#inModelOtro').value.trim();
+  state.settings.effort = $('#inEffort').value;
+  guardar();
+  pintarAjustes();
+  const ok = $('#setOk');
+  ok.classList.remove('hidden');
+  setTimeout(() => ok.classList.add('hidden'), 1600);
+});
+$('#btnForget').addEventListener('click', () => {
+  state.settings.key = ''; state.settings.remember = false;
+  guardar(); pintarAjustes();
+});
+$('#btnExport').addEventListener('click', () => {
+  const datos = { version: 1, exportado: new Date().toISOString(), problemas: state.extra, progreso: state.prog, codigo: state.codigo };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(datos, null, 2)], { type:'application/json' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = 'biotensor-progreso.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+$('#btnImport').addEventListener('click', () => $('#fileImport').click());
+$('#fileImport').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const d = JSON.parse(r.result);
+      state.extra = d.problemas || [];
+      state.prog = d.progreso || {};
+      state.codigo = d.codigo || {};
+      guardar();
+      $('#setMsg').innerHTML = '<p class="note">Progreso importado: ' + state.extra.length + ' retos propios y ' + Object.keys(state.prog).length + ' en repaso.</p>';
+      pintarCatalogo();
+    } catch(err){
+      $('#setMsg').innerHTML = '<div class="err">El archivo no tiene el formato esperado.</div>';
+    }
+  };
+  r.readAsText(f);
+});
+$('#btnReset').addEventListener('click', () => {
+  if(!confirm('Se borran tus retos generados, tu código y todo el historial de repaso. ¿Seguir?')) return;
+  state.extra = []; state.prog = {}; state.codigo = {};
+  guardar(); pintarCatalogo();
+  $('#setMsg').innerHTML = '<p class="note">Todo vaciado.</p>';
+});
+
+/* =====================================================================
+   Arranque
+   ===================================================================== */
+pintarAjustes();
+pintarCatalogo();
+if(!store.persistent){
+  $('#setMsg') && ($('#setMsg').innerHTML = '<div class="err">Este navegador no permite almacenamiento local aquí: el progreso durará solo lo que dure la pestaña. Publica el archivo o ábrelo desde un servidor para conservarlo.</div>');
+}
+window.ir = ir;
+</script>
+</body>
+</html>
